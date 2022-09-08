@@ -1,32 +1,50 @@
-import { StyleSheet } from 'react-native';
-
-import EditScreenInfo from '../components/EditScreenInfo';
-import { Text, View } from '../components/Themed';
 import { RootTabScreenProps } from '../types';
+import MasonryList from "../components/MasonryList";
+import {useEffect, useState} from "react";
+import {useNhostClient} from "@nhost/react";
+import {Alert} from "react-native";
 
-export default function TabOneScreen({ navigation }: RootTabScreenProps<'TabOne'>) {
+export default function HomeScreen({ navigation }: RootTabScreenProps<'Home'>) {
+
+  const [pins, setPins] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const nhost = useNhostClient();
+
+  const fetchPins = async () => {
+    setLoading(true);
+    const response = await nhost.graphql.request(` 
+      query MyQuery {
+        pins {
+          created_at
+          id
+          image
+          title
+          user_id
+      }
+    }
+      `);
+
+    if (response.error) {
+      Alert.alert('Error fetching pins');
+    } else {
+      setPins(response.data.pins);
+    }
+    setLoading(false);
+  }
+
+  useEffect(() => {
+    fetchPins()
+
+  }, []);
+
+
+
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Tab One</Text>
-      <View style={styles.separator} lightColor="#eee" darkColor="rgba(255,255,255,0.1)" />
-      <EditScreenInfo path="/screens/TabOneScreen.tsx" />
-    </View>
+      <MasonryList
+          pins={pins}
+          onRefresh={fetchPins}
+          refreshing={loading}
+      />
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  separator: {
-    marginVertical: 30,
-    height: 1,
-    width: '80%',
-  },
-});
